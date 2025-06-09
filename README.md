@@ -4,4 +4,4 @@ This is the github repository for a minicourse created by Sergio Eraso and Jacki
 # Contact Information
 For mistakes or questions please contact:\
 Sergio Eraso: sergioerasojr@gmail.com\
-Jackie Hernandez: [email]
+Jackie Hernandez: lijaheay@gmail.com\
