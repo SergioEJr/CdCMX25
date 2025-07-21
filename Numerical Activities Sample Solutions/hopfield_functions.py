@@ -1,0 +1,125 @@
+# Clubes de Ciencia Mexico 2025
+# by Sergio Eraso
+
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+
+def convert_img(path, side):
+    """makes an image into a square and converts its data
+    into a binary string of 1s and -1s
+
+    Args:
+        path (str): image file location
+        side (int): length of side of image
+
+    Returns:
+        ndarray: flattened binary image
+    """
+    img = Image.open(path)
+    img = img.resize((side, side))          # make the image square  
+    img = img.convert('1')                  # converts the image to binary
+    img = 2 * np.array(img, int) - 1        # shifts pixels to be 1 and -1
+    return img.flatten()
+
+def show_img(img_array):
+    """shows an image
+
+    Args:
+        img_array (ndarray): flattened image array
+    """
+    side = int(np.sqrt(img_array.shape[0]))
+    img_array = img_array.reshape((side, side))
+    plt.figure(figsize=(3, 3))
+    plt.imshow(img_array)
+    plt.axis('off')
+    plt.show()
+
+def corrupt_img(img, p = 0.5):
+    """corrupt an image by randomly flipping
+    a proportion of its bits
+
+    Args:
+        img (ndarray): flattened image array
+        p (float): proportion of data to corrupt, number between 0 and 1
+
+    Returns:
+        ndarray: corrupted image
+    """
+    N = img.size
+    num_to_flip = int(p*N)
+    indices = np.random.choice(N, size=num_to_flip)
+    c_img = img.copy()
+    # flip the selected spins
+    for i in indices:
+        c_img[i] *= -1
+    return c_img
+
+def calculate_w(img): 
+    """create a weight matrix to store the information of the
+    image in the network
+
+    Args:
+        img (ndarray): flattened image array
+
+    Returns:
+        ndarray: weight matrix
+    """
+    n = img.size
+    w = np.zeros((n,n))
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                w[i,j] = img[i] * img[j]
+    np.outer(img,img)
+    return w
+
+def delta_energy(i, state, w):
+    return state[i]*np.dot(w[i],state)
+
+def recall(state, w): 
+    """recall a pattern using the weight (connectivity) matrix w
+
+    Args:
+        state (ndarray): corrupted pattern
+        w (ndarray): weight matrix
+
+    Returns:
+        ndarray: recovered pattern
+    """
+    n = state.size
+    indices = np.random.permutation(n)
+    r_img = state.copy()
+    for i in range(n):
+        flipped = False
+        for index in indices:
+            dE = delta_energy(index, r_img, w)
+            # go down the energy landscape
+            if dE < 0:
+                r_img[index] *= -1
+                flipped = True
+        if not flipped:
+            print(f"converged in {i} iterations")
+            break
+        
+    return r_img
+
+def recall_series(steps, state, w):
+    snapshots = []
+    n = state.size
+    r_img = state.copy()
+    snapshots.append(r_img.copy())
+    for i in range(steps):
+        flipped = False
+        # update the pixels randomly
+        indices = np.random.permutation(n)
+        for index in indices:
+            dE = delta_energy(index, r_img, w)
+            if dE < 0:
+                r_img[index] *= -1
+                flipped = True
+            snapshots.append(r_img.copy())
+        if not flipped:
+            print(f"converged in {i} iterations")
+            break
+    return snapshots

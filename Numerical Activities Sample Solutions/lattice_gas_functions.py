@@ -1,3 +1,6 @@
+# Clubes de Ciencia Mexico 2025
+# by Sergio Eraso
+
 import matplotlib.pyplot as plt
 import numpy as np
 import gzip

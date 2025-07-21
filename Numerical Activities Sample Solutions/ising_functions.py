@@ -1,3 +1,6 @@
+# Clubes de Ciencia Mexico 2025
+# by Sergio Eraso
+
 import matplotlib.pyplot as plt
 import numpy as np
 import multiprocessing as mp
@@ -41,6 +44,23 @@ def H(row : int, col : int, lattice : NDArray, params : dict):
     # calculate the interaction energy and return
     energy = -K*np.sum(neighbors*s) + h*s
     return energy
+
+def tot_H(lattice, params):
+    """calculates the total interaction energy of a lattice of spins
+
+    Args:
+        lattice (ndarray): current state
+        params (dict): parameters of the simulation
+
+    Returns:
+        float: the energy of the lattice
+    """
+    energy = 0
+    L = lattice.shape[0]
+    for i in range(L):
+        for j in range(L):
+            energy += H(i, j, lattice, params)
+    return energy/2
     
 
 def update(lattice : NDArray, params : dict):
