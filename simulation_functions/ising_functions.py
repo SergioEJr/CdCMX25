@@ -29,6 +29,9 @@ def H(row : int, col : int, lattice : NDArray, params : dict):
         row (_type_): _description_
         col (_type_): _description_
         lattice (_type_): _description_
+        
+    Returns:
+        float : energy of the nearest-neighbor interactions
     """
     L = lattice.shape[0]
     K = params["interaction_strength"]
@@ -45,7 +48,7 @@ def H(row : int, col : int, lattice : NDArray, params : dict):
     energy = -K*np.sum(neighbors*s) + h*s
     return energy
 
-def tot_H(lattice, params):
+def tot_H(lattice : NDArray, params : dict):
     """calculates the total interaction energy of a lattice of spins
 
     Args:
@@ -94,13 +97,33 @@ def update(lattice : NDArray, params : dict):
     return lattice
 
 def sweep(lattice : NDArray, params : dict):
+    """performs a sweep over the lattice, that is LxL updates
+    
+    Args:
+        lattice (ndarray): current state of the lattice
+        
+    Returns:
+        ndarray: new state of the lattice after LxL updates
+    """
     L = lattice.shape[0]
     new_lattice = lattice.copy()
     for _ in range(L*L):
         new_lattice = update(new_lattice, params)
     return new_lattice
 
-def run_simulation(n_sweeps : int, L : int, T : float, K : float, h : float):
+def run_simulation(n_sweeps : int, L : int, T : float, K : float = 1, h : float = 0):
+    """runs an Ising model simulation and returns the final state of the system
+    
+    Args:
+        n_sweeps (int): number of sweeps
+        L (int): size of the lattice
+        T (float): temperature of the system
+        K (float, optional): interaction strength (defaults to 1)
+        h (float, optional): external field (defaults to 0)
+        
+    Returns:
+        ndarray : final state of the system
+    """
     params = {"temperature" : T, "interaction_strength" : K, "external_field" : h}
     lattice = initialize_lattice(L)
     for i in range(n_sweeps):
@@ -110,7 +133,19 @@ def run_simulation(n_sweeps : int, L : int, T : float, K : float, h : float):
 def unpack_run_simulation(args):
     return run_simulation(*args)
 
-def snapshot_series(n_sweeps : int, L : int, T : float, K : float, h : float):
+def snapshot_series(n_sweeps : int, L : int, T : float, K : float = 1, h : float = 0):
+    """runs an Ising model simulation and returns an array of snapshots of the system
+    
+    Args:
+        n_sweeps (int): number of sweeps
+        L (int): size of the lattice
+        T (float): temperature of the system
+        K (float, optional): interaction strength (defaults to 1)
+        h (float, optional): external field (defaults to 0)
+        
+    Returns:
+        ndarray : array of snapshots of the system
+    """
     params = {"temperature" : T, "interaction_strength" : K, "external_field" : h}
     lattice = initialize_lattice(L)
     snapshots = []
@@ -122,10 +157,23 @@ def snapshot_series(n_sweeps : int, L : int, T : float, K : float, h : float):
     return snapshots
 
 def ensemble_simulation(n_trials : int, n_sweeps : int, L : int, T : float, K : float, h : float):
+    """runs various Ising simulations in parallel using multiprocessing and returns
+    an array of the final snapshots of each system
+    
+    Args:
+        n_sweeps (int): number of sweeps
+        L (int): size of the lattice
+        T (float): temperature of the system
+        K (float, optional): interaction strength (defaults to 1)
+        h (float, optional): external field (defaults to 0)
+        
+    Returns:
+        ndarray : array of snapshots of the system
+    """
     args = [(n_sweeps, L, T, K, h) for _ in range(n_trials)]
     final_snapshots = process_map(unpack_run_simulation,
                         args,
-                        chunksize=1,        # tweak for best throughput
+                        chunksize=1,            # tweak for best throughput
                         desc="Simulations")
     final_snapshots = np.asarray(final_snapshots)
 

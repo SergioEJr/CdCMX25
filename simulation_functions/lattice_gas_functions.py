@@ -1,12 +1,10 @@
 # Clubes de Ciencia Mexico 2025
 # by Sergio Eraso
 
-import matplotlib.pyplot as plt
 import numpy as np
-import gzip
-from sys import getsizeof
+from numpy.typing import NDArray
 
-def initialize_lattice(L):
+def initialize_lattice(L : int):
     """initialize a lattice of size LxL with half filled with ones and half with zeros
 
     Args:
@@ -19,12 +17,14 @@ def initialize_lattice(L):
     lattice[:,:L//2] = 0
     return lattice
 
-def choose_neighbor(row, col, L):
+def choose_neighbor(row : int, col : int, L : int):
     """select a random neighbor of a site in a lattice of size LxL assuming
     periodic boundary conditions in the horizontal direction and 
     closed boundary conditions in the vertical direction
 
     Args:
+        row (int): row of the central site
+        col (int): column of the central site
         L (int): dimension of the lattice
         
     Returns:
@@ -56,7 +56,7 @@ def choose_neighbor(row, col, L):
         n_col = (col + 1) % L  # wrap around horizontally
     return n_row, n_col 
 
-def update(lattice):
+def update(lattice : NDArray):
     """evolves the lattice by randomly selecting a site and swapping it with one of its neighbors
 
     Args:
@@ -79,7 +79,7 @@ def update(lattice):
     lattice[n_row][n_col] = site
     return lattice
 
-def sweep(lattice):
+def sweep(lattice : NDArray):
     """performs a sweep over the lattice, that is LxL updates
     
     Args:
