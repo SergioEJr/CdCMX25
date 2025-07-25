@@ -6,7 +6,7 @@ import numpy as np
 import multiprocessing as mp
 from numpy.typing import NDArray
 from tqdm.contrib.concurrent import process_map
-from tqdm import tqdm
+from tqdm.notebook import trange
 
 def initialize_lattice(L : int):
     """randomly initialize a lattice of spins of size LxL
@@ -21,18 +21,20 @@ def initialize_lattice(L : int):
     
     return lattice
 
-def H(row : int, col : int, lattice : NDArray, params : dict):
+def local_H(row : int, col : int, lattice : NDArray, params : dict):
     """calculates the nearest-neighbor interaction energies of a spin
     at location (row,col) in a lattice assuming periodic boundary conditions
 
     Args:
-        row (_type_): _description_
-        col (_type_): _description_
-        lattice (_type_): _description_
+        row (int): row of spin
+        col (int): column of spin
+        lattice (NDArray): current state of the lattice
+        params (dict): parameters of the simulation
         
     Returns:
         float : energy of the nearest-neighbor interactions
     """
+    # unpack the parameters
     L = lattice.shape[0]
     K = params["interaction_strength"]
     h = params["external_field"]
@@ -40,13 +42,30 @@ def H(row : int, col : int, lattice : NDArray, params : dict):
     s = lattice[row][col]
     # store neighboring spins
     neighbors = np.zeros(4)
+    # periodic boundary conditions
     neighbors[0] = lattice[(row - 1)%L][col]        # up
     neighbors[1] = lattice[(row + 1)%L][col]        # down
     neighbors[2] = lattice[row][(col - 1)%L]        # left
     neighbors[3] = lattice[row][(col + 1)%L]        # right
     # calculate the interaction energy and return
-    energy = -K*np.sum(neighbors*s) + h*s
+    energy = -K*s*(np.sum(neighbors) - h)
     return energy
+
+def delta_H(row : int, col : int, lattice : NDArray, params: dict):
+    """calculates the change in energy of an ising model
+    due to a spin flip
+    
+    Args:
+        row (int): row of spin
+        col (int): column of spin
+        lattice (NDArray): current state of the lattice
+        params (dict): parameters of the simulation
+        
+    Returns:
+        float : change in energy of the nearest-neighbor interactions
+    """
+    # this formula comes straight from the Hamiltonian
+    return -2*local_H(row, col, lattice, params)
 
 def tot_H(lattice : NDArray, params : dict):
     """calculates the total interaction energy of a lattice of spins
@@ -62,7 +81,8 @@ def tot_H(lattice : NDArray, params : dict):
     L = lattice.shape[0]
     for i in range(L):
         for j in range(L):
-            energy += H(i, j, lattice, params)
+            energy += local_H(i, j, lattice, params)
+    # divide by two to avoid double counting bonds
     return energy/2
     
 
@@ -79,21 +99,19 @@ def update(lattice : NDArray, params : dict):
     """
     L = lattice.shape[0]
     T = params["temperature"]
+    # step 1: choose a random site
     row = np.random.randint(0,L)
     col = np.random.randint(0,L)
-    
-    E = H(row, col, lattice, params)
-    boltzmann_weight = np.exp(-E/T)
-    flip_boltzmann_weight = np.exp(E/T)
-    
-    accept_ratio = flip_boltzmann_weight/boltzmann_weight
-    # if the energy is positive, then flipping is better
-    if accept_ratio > 1:
+    # step 2: calculate the change in energy from flipping the spin at that site
+    delta_E = delta_H(row, col, lattice, params)
+    # if the change in energy is negative, then flip the spin with probability 1
+    if delta_E < 0:
         lattice[row][col] = -lattice[row][col]
     # otherwise, flip with probability given by the Boltzmann factor
-    elif np.random.rand() < accept_ratio:
-        lattice[row][col] = -lattice[row][col]
-        
+    else:
+        accept_ratio = np.exp(-delta_E/T)
+        if np.random.rand() < accept_ratio:
+            lattice[row][col] = -lattice[row][col]
     return lattice
 
 def sweep(lattice : NDArray, params : dict):
@@ -101,6 +119,7 @@ def sweep(lattice : NDArray, params : dict):
     
     Args:
         lattice (ndarray): current state of the lattice
+        params (dict): simulation parameters
         
     Returns:
         ndarray: new state of the lattice after LxL updates
@@ -133,7 +152,7 @@ def run_simulation(n_sweeps : int, L : int, T : float, K : float = 1, h : float 
 def unpack_run_simulation(args):
     return run_simulation(*args)
 
-def snapshot_series(n_sweeps : int, L : int, T : float, K : float = 1, h : float = 0):
+def snapshot_series(n_sweeps : int, L : int, T : float, K : float = 1, h : float = 0, prog = True):
     """runs an Ising model simulation and returns an array of snapshots of the system
     
     Args:
@@ -150,9 +169,14 @@ def snapshot_series(n_sweeps : int, L : int, T : float, K : float = 1, h : float
     lattice = initialize_lattice(L)
     snapshots = []
     snapshots.append(lattice)
-    for i in range(n_sweeps):
-        lattice = sweep(lattice, params)
-        snapshots.append(lattice)
+    if prog is True:
+        for i in trange(n_sweeps):
+            lattice = sweep(lattice, params)
+            snapshots.append(lattice)
+    else:
+        for i in range(n_sweeps):
+            lattice = sweep(lattice, params)
+            snapshots.append(lattice)
     snapshots = np.asarray(snapshots)
     return snapshots
 

@@ -5,6 +5,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
+def initialize_lattice(L : int):
+    """randomly initialize a lattice of spins of size LxL
+
+    Args:
+        L (int): dimension of the lattice
+
+    Returns:
+        ndarray: initialized lattice of size LxL
+    """
+    lattice = np.random.choice([-1,1], size=(L,L))
+    
+    return lattice
+
 def convert_img(path, side):
     """makes an image into a square and converts its data
     into a binary string of 1s and -1s
@@ -31,7 +44,7 @@ def show_img(img_array):
     side = int(np.sqrt(img_array.shape[0]))
     img_array = img_array.reshape((side, side))
     plt.figure(figsize=(3, 3))
-    plt.imshow(img_array)
+    plt.imshow(img_array, cmap="grey")
     plt.axis('off')
     plt.show()
 
@@ -55,7 +68,7 @@ def corrupt_img(img, p = 0.5):
         c_img[i] *= -1
     return c_img
 
-def calculate_w(img): 
+def calculate_K(img): 
     """create a weight matrix to store the information of the
     image in the network
 
@@ -65,16 +78,10 @@ def calculate_w(img):
     Returns:
         ndarray: weight matrix
     """
-    n = img.size
-    w = np.zeros((n,n))
-    for i in range(n):
-        for j in range(n):
-            if i != j:
-                w[i,j] = img[i] * img[j]
-    np.outer(img,img)
-    return w
+    K = np.outer(img,img)
+    return K
 
-def delta_energy(i, state, w):
+def delta_H(i, state, w):
     return state[i]*np.dot(w[i],state)
 
 def recall(state, w): 
@@ -93,7 +100,7 @@ def recall(state, w):
     for i in range(n):
         flipped = False
         for index in indices:
-            dE = delta_energy(index, r_img, w)
+            dE = delta_H(index, r_img, w)
             # go down the energy landscape
             if dE < 0:
                 r_img[index] *= -1
@@ -114,7 +121,7 @@ def recall_series(steps, state, w):
         # update the pixels randomly
         indices = np.random.permutation(n)
         for index in indices:
-            dE = delta_energy(index, r_img, w)
+            dE = delta_H(index, r_img, w)
             if dE < 0:
                 r_img[index] *= -1
                 flipped = True
