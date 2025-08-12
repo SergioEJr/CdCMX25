@@ -1,6 +1,0 @@
-{
-    "workbench.colorTheme": "Monokai Classic",
-    "python.analysis.extraPaths": [
-        "./Simulation Sample Solutions"
-    ]
-}
