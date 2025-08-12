@@ -93,3 +93,25 @@ def sweep(lattice : NDArray):
     for _ in range(L*L):
         new_latice = update(new_lattice)
     return new_lattice
+
+def x_density(lattice, window_size : int = 1):
+    """Calculates the coarse-grained density of a given
+    lattice gas configuration. The larger window_size, the
+    smoother the density profile.
+
+    Args:
+        lattice (NDArray): current state
+        window_size (int) : rolling average window size
+        
+    Returns:
+        NDArray : coarse-grained x-density profile
+    """
+    L = lattice.shape[0]
+    # density of each column
+    dens = np.mean(lattice, axis = 0)
+    # concatenate the array three times for periodic boundary conditions
+    dens3 = np.concatenate([dens,dens,dens])
+    window = np.ones(window_size)/window_size
+    # calculate the rolling average density for each x location
+    dens = np.convolve(window, dens3, mode="same")[L:2*L]
+    return dens

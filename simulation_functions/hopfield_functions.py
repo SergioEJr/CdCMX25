@@ -4,6 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from numpy.typing import NDArray
 
 def initialize_lattice(L : int):
     """randomly initialize a lattice of spins of size LxL
@@ -18,7 +19,7 @@ def initialize_lattice(L : int):
     
     return lattice
 
-def convert_img(path, side):
+def convert_img(path : str, side : int):
     """makes an image into a square and converts its data
     into a binary string of 1s and -1s
 
@@ -35,11 +36,11 @@ def convert_img(path, side):
     img = 2 * np.array(img, int) - 1        # shifts pixels to be 1 and -1
     return img.flatten()
 
-def show_img(img_array):
+def show_img(img_array : NDArray):
     """shows an image
 
     Args:
-        img_array (ndarray): flattened image array
+        img_array (NDArray): flattened image array
     """
     side = int(np.sqrt(img_array.shape[0]))
     img_array = img_array.reshape((side, side))
@@ -48,8 +49,8 @@ def show_img(img_array):
     plt.axis('off')
     plt.show()
 
-def corrupt_img(img, p = 0.5):
-    """corrupt an image by randomly flipping
+def corrupt_img(img : NDArray, p : float = 0.5):
+    """corrupt an image by randomly flipping (or not)
     a proportion of its bits
 
     Args:
@@ -61,14 +62,15 @@ def corrupt_img(img, p = 0.5):
     """
     N = img.size
     num_to_flip = int(p*N)
-    indices = np.random.choice(N, size=num_to_flip)
+    indices = np.random.choice(N, size=num_to_flip, replace=False)
     c_img = img.copy()
     # flip the selected spins
     for i in indices:
-        c_img[i] *= -1
+        if np.random.rand() < 0.5:
+            c_img[i] *= -1
     return c_img
 
-def calculate_K(img): 
+def calculate_K(img : NDArray): 
     """create a weight matrix to store the information of the
     image in the network
 
@@ -81,15 +83,26 @@ def calculate_K(img):
     K = np.outer(img,img)
     return K
 
-def delta_H(i, state, w):
-    return state[i]*np.dot(w[i],state)
+def delta_H(i : int, state : NDArray, K : NDArray):
+    """Calculates the change in energy of a Hopfield network
+    after flipping spin i
 
-def recall(state, w): 
+    Args:
+        i (int): index of the neuron
+        state (ndarray): current state
+        K (ndarray): connectivity matrix
+
+    Returns:
+        ndarray: _description_
+    """
+    return state[i]*np.dot(K[i],state)
+
+def recall(state : NDArray, K : NDArray): 
     """recall a pattern using the weight (connectivity) matrix w
 
     Args:
         state (ndarray): corrupted pattern
-        w (ndarray): weight matrix
+        K (ndarray): connectivity matrix
 
     Returns:
         ndarray: recovered pattern
@@ -100,7 +113,7 @@ def recall(state, w):
     for i in range(n):
         flipped = False
         for index in indices:
-            dE = delta_H(index, r_img, w)
+            dE = delta_H(index, r_img, K)
             # go down the energy landscape
             if dE < 0:
                 r_img[index] *= -1
@@ -111,17 +124,27 @@ def recall(state, w):
         
     return r_img
 
-def recall_series(steps, state, w):
+def recall_snapshots(state : NDArray, K : NDArray, iterations : int = 1):
+    """recall a pattern using the connectivity matrix K
+
+    Args:
+        state (ndarray): corrupted pattern
+        K (ndarray): connectivity matrix
+        iterations (int) : number of loops. Defaults to 1
+
+    Returns:
+        ndarray: recovered pattern
+    """
     snapshots = []
     n = state.size
     r_img = state.copy()
     snapshots.append(r_img.copy())
-    for i in range(steps):
+    for i in range(iterations):
         flipped = False
         # update the pixels randomly
         indices = np.random.permutation(n)
         for index in indices:
-            dE = delta_H(index, r_img, w)
+            dE = delta_H(index, r_img, K)
             if dE < 0:
                 r_img[index] *= -1
                 flipped = True
