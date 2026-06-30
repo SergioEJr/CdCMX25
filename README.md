@@ -84,7 +84,7 @@ If you do have a GitHub account and want to keep your own copy of your work (inc
 4. Tackle the activities in order: `A0` → `A1` → `A2` → `A3`.
 5. Check your work against the `Complete Notebooks/`, and dive into [`suggested_readings.md`](suggested_readings.md) whenever you want to go deeper on a topic.
 
-Have fun, and don't hesitate to reach out with questions (see below).
+Have fun, and don't hesitate to reach out with questions!
 
 # Contact Information
 For mistakes or questions please contact:\
